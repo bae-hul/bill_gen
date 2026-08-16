@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bill Generator</title>
+    <!-- Import pdf-lib via CDN -->
+    <script src="https://unpkg.com/pdf-lib@1.17.1/dist/pdf-lib.min.js"></script>
+    
+    <style>
+        body {
+            font-family: system-ui, -apple-system, sans-serif;
+            max-width: 500px;
+            margin: 50px auto;
+            padding: 30px;
+            background-color: #f9fafb;
+            border: 1px solid #e5e7eb;
+            border-radius: 8px;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+        }
+        h2 {
+            text-align: center;
+            color: #111827;
+            margin-top: 0;
+        }
+        .input-group {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            margin-bottom: 25px;
+        }
+        input {
+            padding: 12px;
+            font-size: 16px;
+            border: 1px solid #d1d5db;
+            border-radius: 6px;
+            outline: none;
+        }
+        input:focus {
+            border-color: #3b82f6;
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.2);
+        }
+        button {
+            width: 100%;
+            padding: 14px;
+            font-size: 16px;
+            font-weight: 600;
+            background-color: #2563eb;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+        button:hover {
+            background-color: #1d4ed8;
+        }
+    </style>
+</head>
+<body>
+
+    <h2>Generate Bills</h2>
+    
+    <div class="input-group">
+        <input type="text" id="bill1" placeholder="Bill 1 Number (e.g., 2147)" maxlength="4">
+        <input type="text" id="bill2" placeholder="Bill 2 Number (e.g., 5768)" maxlength="4">
+        <input type="text" id="bill3" placeholder="Bill 3 Number" maxlength="4">
+        <input type="text" id="bill4" placeholder="Bill 4 Number" maxlength="4">
+    </div>
+    
+    <button onclick="generatePDF()">Download Generated PDF</button>
+
+    <script>
+        async function generatePDF() {
+            // Ensure the library loaded properly
+            if (!window.PDFLib) {
+                alert("PDF-lib library failed to load. Please check your internet connection.");
+                return;
+            }
+
+            const { PDFDocument, rgb } = PDFLib;
+
+            // 1. Get user inputs (defaulting to empty string if left blank)
+            const bill1 = document.getElementById('bill1').value || '';
+            const bill2 = document.getElementById('bill2').value || '';
+            const bill3 = document.getElementById('bill3').value || '';
+            const bill4 = document.getElementById('bill4').value || '';
+
+            try {
+                // 2. Fetch the Master PDF
+                // NOTE: "master.pdf" must be in the exact same directory as this HTML file
+                const url = 'master.pdf'; 
+                const response = await fetch(url);
+                
+                if (!response.ok) {
+                    throw new Error("Could not find 'master.pdf'. Make sure it is uploaded to the same folder.");
+                }
+                
+                const existingPdfBytes = await response.arrayBuffer();
+
+                // 3. Load the PDF document
+                const pdfDoc = await PDFDocument.load(existingPdfBytes);
+                
+                // 4. Get the first page
+                const pages = pdfDoc.getPages();
+                const firstPage = pages[0];
+
+                // 5. Draw the red text at specific coordinates 
+                // REMINDER: You will need to adjust the X and Y coordinates below. 
+                // In PDF-lib, (0,0) is the BOTTOM-LEFT corner of the page.
+                const textSize = 18;
+                const textColor = rgb(1, 0, 0); // Red
+
+                firstPage.drawText(bill1, { x: 250, y: 700, size: textSize, color: textColor });
+                firstPage.drawText(bill2, { x: 250, y: 500, size: textSize, color: textColor });
+                firstPage.drawText(bill3, { x: 250, y: 300, size: textSize, color: textColor });
+                firstPage.drawText(bill4, { x: 250, y: 100, size: textSize, color: textColor });
+
+                // 6. Serialize the PDF to bytes
+                const pdfBytes = await pdfDoc.save();
+
+                // 7. Trigger the browser to download the file
+                const blob = new Blob([pdfBytes], { type: "application/pdf" });
+                const link = document.createElement('a');
+                link.href = URL.createObjectURL(blob);
+                link.download = "Generated_Bills.pdf";
+                document.body.appendChild(link);
+                link.click();
+                
+                // Cleanup
+                document.body.removeChild(link);
+                URL.revokeObjectURL(link.href);
+
+            } catch (error) {
+                console.error(error);
+                alert("Error generating PDF: " + error.message);
+            }
+        }
+    </script>
+</body>
+</html>
